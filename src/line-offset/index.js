@@ -1,4 +1,4 @@
-﻿import { flattenEach, coordEach } from '../meta';
+import { flattenEach, coordEach } from '../meta';
 import { getCoords, getType } from '../invariant';
 import { isObject, lineString, multiLineString, convertLength, degreesToRadians, radiansToDegrees } from '../helpers';
 import intersection from './lib/intersection';

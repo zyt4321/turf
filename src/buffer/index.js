@@ -1,4 +1,4 @@
-﻿import clone from '../clone';
+import clone from '../clone';
 import { BufferOp, GeoJSONReader, GeoJSONWriter } from 'turf-jsts';
 import centerOfMass from '../center-of-mass';
 import { geomEach, coordEach, featureEach } from '../meta';
@@ -50,18 +50,18 @@ function buffer(geojson, radius, options) {
     var results = [];
 
     switch (geojson.type) {
-    case 'GeometryCollection':
-        geomEach(geojson, function (geometry) {
-            var buffered = bufferFeature(geometry, distance);
-            if (buffered) results.push(buffered);
-        });
-        return featureCollection(results);
-    case 'FeatureCollection':
-        featureEach(geojson, function (feature) {
-            var buffered = bufferFeature(feature, distance);
-            if (buffered) results.push(buffered);
-        });
-        return featureCollection(results);
+        case 'GeometryCollection':
+            geomEach(geojson, function (geometry) {
+                var buffered = bufferFeature(geometry, distance);
+                if (buffered) results.push(buffered);
+            });
+            return featureCollection(results);
+        case 'FeatureCollection':
+            featureEach(geojson, function (feature) {
+                var buffered = bufferFeature(feature, distance);
+                if (buffered) results.push(buffered);
+            });
+            return featureCollection(results);
     }
     return bufferFeature(geojson, distance);
 }
@@ -173,7 +173,7 @@ function convertCoordToUtm(lon, lat, zone) {
 
     let tao_ = tao * Math.sqrt(1 + sigma * sigma) - sigma * Math.sqrt(1 + tao * tao);
 
-    let epsilon_ = Math.atan2(tao_, coslambda);
+    let ksai_ = Math.atan2(tao_, coslambda);
     let yita_ = Math.asinh(sinlambda / Math.sqrt(tao_ * tao_ + coslambda * coslambda));
 
     let A = a / (1 + n) * (1 + 1 / 4 * n2 + 1 / 64 * n4 + 1 / 256 * n6); // 2πA is the circumference of a meridian
@@ -186,14 +186,14 @@ function convertCoordToUtm(lon, lat, zone) {
         34729 / 80640 * n5 - 3418889 / 1995840 * n6,
         212378941 / 319334400 * n6];
 
-    let epsilon = epsilon_;
-    for (let j = 1; j <= 6; j++) epsilon += alpha[j] * Math.sin(2 * j * epsilon_) * Math.cosh(2 * j * yita_);
+    let ksai = ksai_;
+    for (let j = 1; j <= 6; j++) ksai += alpha[j] * Math.sin(2 * j * ksai_) * Math.cosh(2 * j * yita_);
 
     let yita = yita_;
-    for (let j = 1; j <= 6; j++) yita += alpha[j] * Math.cos(2 * j * epsilon_) * Math.sinh(2 * j * yita_);
+    for (let j = 1; j <= 6; j++) yita += alpha[j] * Math.cos(2 * j * ksai_) * Math.sinh(2 * j * yita_);
 
     let x = k0 * A * yita;
-    let y = k0 * A * epsilon;
+    let y = k0 * A * ksai;
 
     x = x + falseEasting;
     if (y < 0) y = y + falseNorthing;
@@ -223,7 +223,7 @@ function convertUtmToLatLon(y, x, zone) {
     var A = a / (1 + n) * (1 + 1 / 4 * n2 + 1 / 64 * n4 + 1 / 256 * n6); // 2πA is the circumference of a meridian
 
     var yita = x / (k0 * A);
-    var epsilon = y / (k0 * A);
+    var ksai = y / (k0 * A);
 
     var beta = [null, // note beta is one-based array (6th order Krüger expressions)
         1 / 2 * n - 2 / 3 * n2 + 37 / 96 * n3 -    1 / 360 * n4 -   81 / 512 * n5 +    96199 / 604800 * n6,
@@ -233,23 +233,23 @@ function convertUtmToLatLon(y, x, zone) {
         4583 / 161280 * n5 -  108847 / 3991680 * n6,
         20648693 / 638668800 * n6];
 
-    var epsilon_ = epsilon;
-    for (var j = 1; j <= 6; j++) epsilon_ -= beta[j] * Math.sin(2 * j * epsilon) * Math.cosh(2 * j * yita);
+    var ksai_ = ksai;
+    for (var j = 1; j <= 6; j++) ksai_ -= beta[j] * Math.sin(2 * j * ksai) * Math.cosh(2 * j * yita);
 
     var yita_ = yita;
-    for (var j = 1; j <= 6; j++) yita_ -= beta[j] * Math.cos(2 * j * epsilon) * Math.sinh(2 * j * yita);  //eslint-disable-line
+    for (var j = 1; j <= 6; j++) yita_ -= beta[j] * Math.cos(2 * j * ksai) * Math.sinh(2 * j * yita);  //eslint-disable-line
 
     var sinhyita_ = Math.sinh(yita_);
-    var sinepsilon_ = Math.sin(epsilon_), cosepsilon_ = Math.cos(epsilon_);
+    var sinksai_ = Math.sin(ksai_), cosksai_ = Math.cos(ksai_);
 
-    var tao_ = sinepsilon_ / Math.sqrt(sinhyita_ * sinhyita_ + cosepsilon_ * cosepsilon_);
+    var tao_ = sinksai_ / Math.sqrt(sinhyita_ * sinhyita_ + cosksai_ * cosksai_);
 
     var taoi = tao_;
     do {
         var sigmai = Math.sinh(e * Math.atanh(e * taoi / Math.sqrt(1 + taoi * taoi)));
         var taoi_ = taoi * Math.sqrt(1 + sigmai * sigmai) - sigmai * Math.sqrt(1 + taoi * taoi);
         var deltataoi = (tao_ - taoi_) / Math.sqrt(1 + taoi_ * taoi_) *
-        (1 + (1 - e * e) * taoi * taoi) / ((1 - e * e) * Math.sqrt(1 + taoi * taoi));
+            (1 + (1 - e * e) * taoi * taoi) / ((1 - e * e) * Math.sqrt(1 + taoi * taoi));
         taoi += deltataoi;
     } while (Math.abs(deltataoi) > 1e-12); // using IEEE 754 deltataoi -> 0 after 2-3 iterations
     // note relatively large convergence test as deltataoi toggles on ±1.12e-16 for eg 31 N 400000 5000000
@@ -257,7 +257,7 @@ function convertUtmToLatLon(y, x, zone) {
 
     var fai = Math.atan(tao);
 
-    var lambda = Math.atan2(sinhyita_, cosepsilon_);
+    var lambda = Math.atan2(sinhyita_, cosksai_);
 
     var lambda0 = degreesToRadians((z - 1) * 6 - 180 + 3); // longitude of central meridian
     lambda += lambda0; // move lambda from zonal to global coordinates
