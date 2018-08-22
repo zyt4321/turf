@@ -1,4 +1,4 @@
-import { flattenEach, coordEach } from '../meta';
+﻿import { flattenEach, coordEach } from '../meta';
 import { getCoords, getType } from '../invariant';
 import { isObject, lineString, multiLineString, convertLength, degreesToRadians, radiansToDegrees } from '../helpers';
 import intersection from './lib/intersection';
@@ -149,23 +149,23 @@ function convertCoordToUtm(lon, lat, zone) {
 
     let falseEasting = 500e3;
     let falseNorthing = 10000e3;
-    let λ0 = degreesToRadians(((zone.zoneNumber - 1) * 6 - 180 + 3));
+    let lambda0 = degreesToRadians(((zone.zoneNumber - 1) * 6 - 180 + 3));
 
     let mgrsLatBands = 'CDEFGHJKLMNPQRSTUVWXX'; // X is repeated for 80-84°N
     let latBand = mgrsLatBands.charAt(Math.floor(lat / 8 + 10));
 
     // adjust zone & central meridian for Norway
-    if (zone === 31 && latBand === 'V' && lon >= 3) { zone++; degreesToRadians(λ0 += 6); }
+    if (zone === 31 && latBand === 'V' && lon >= 3) { zone++; degreesToRadians(lambda0 += 6); }
     // adjust zone & central meridian for Svalbard
-    if (zone === 32 && latBand === 'X' && lon <  9) { zone--; degreesToRadians(λ0 -= 6); }
-    if (zone === 32 && latBand === 'X' && lon >= 9) { zone++; degreesToRadians(λ0 += 6); }
-    if (zone === 34 && latBand === 'X' && lon < 21) { zone--; degreesToRadians(λ0 -= 6); }
-    if (zone === 34 && latBand === 'X' && lon >= 21) { zone++; degreesToRadians(λ0 += 6); }
-    if (zone === 36 && latBand === 'X' && lon < 33) { zone--; degreesToRadians(λ0 -= 6); }
-    if (zone === 36 && latBand === 'X' && lon >= 33) { zone++; degreesToRadians(λ0 += 6); }
+    if (zone === 32 && latBand === 'X' && lon <  9) { zone--; degreesToRadians(lambda0 -= 6); }
+    if (zone === 32 && latBand === 'X' && lon >= 9) { zone++; degreesToRadians(lambda0 += 6); }
+    if (zone === 34 && latBand === 'X' && lon < 21) { zone--; degreesToRadians(lambda0 -= 6); }
+    if (zone === 34 && latBand === 'X' && lon >= 21) { zone++; degreesToRadians(lambda0 += 6); }
+    if (zone === 36 && latBand === 'X' && lon < 33) { zone--; degreesToRadians(lambda0 -= 6); }
+    if (zone === 36 && latBand === 'X' && lon >= 33) { zone++; degreesToRadians(lambda0 += 6); }
 
-    var φ = degreesToRadians(lat);      // latitude ± from equator
-    var λ = degreesToRadians(lon) - λ0; // longitude ± from central meridian
+    var fai = degreesToRadians(lat);      // latitude ± from equator
+    var lambda = degreesToRadians(lon) - lambda0; // longitude ± from central meridian
 
     let a = 6378137;
     let f = 1 / 298.257223563;
@@ -179,19 +179,19 @@ function convertCoordToUtm(lon, lat, zone) {
     let n = f / (2 - f);        // 3rd flattening
     let n2 = n * n, n3 = n * n2, n4 = n * n3, n5 = n * n4, n6 = n * n5; // TODO: compare Horner-form accuracy?
 
-    let cosλ = Math.cos(λ), sinλ = Math.sin(λ);
+    let coslambda = Math.cos(lambda), sinlambda = Math.sin(lambda);
 
-    let τ = Math.tan(φ); // τ ≡ tanφ, τʹ ≡ tanφʹ; prime (ʹ) indicates angles on the conformal sphere
-    let σ = Math.sinh(e * Math.atanh(e * τ / Math.sqrt(1 + τ * τ)));
+    let tao = Math.tan(fai); // tao ≡ tanfai, tao_ ≡ tanfai_; prime (_) indicates angles on the conformal sphere
+    let sigma = Math.sinh(e * Math.atanh(e * tao / Math.sqrt(1 + tao * tao)));
 
-    let τʹ = τ * Math.sqrt(1 + σ * σ) - σ * Math.sqrt(1 + τ * τ);
+    let tao_ = tao * Math.sqrt(1 + sigma * sigma) - sigma * Math.sqrt(1 + tao * tao);
 
-    let ξʹ = Math.atan2(τʹ, cosλ);
-    let ηʹ = Math.asinh(sinλ / Math.sqrt(τʹ * τʹ + cosλ * cosλ));
+    let ksai_ = Math.atan2(tao_, coslambda);
+    let yita_ = Math.asinh(sinlambda / Math.sqrt(tao_ * tao_ + coslambda * coslambda));
 
     let A = a / (1 + n) * (1 + 1 / 4 * n2 + 1 / 64 * n4 + 1 / 256 * n6); // 2πA is the circumference of a meridian
 
-    let α = [null, // note α is one-based array (6th order Krüger expressions)
+    let alpha = [null, // note alpha is one-based array (6th order Krüger expressions)
         1 / 2 * n - 2 / 3 * n2 + 5 / 16 * n3 +   41 / 180 * n4 -     127 / 288 * n5 +      7891 / 37800 * n6,
         13 / 48 * n2 -  3 / 5 * n3 + 557 / 1440 * n4 +     281 / 630 * n5 - 1983433 / 1935360 * n6,
         61 / 240 * n3 -  103 / 140 * n4 + 15061 / 26880 * n5 +   167603 / 181440 * n6,
@@ -199,14 +199,14 @@ function convertCoordToUtm(lon, lat, zone) {
         34729 / 80640 * n5 - 3418889 / 1995840 * n6,
         212378941 / 319334400 * n6];
 
-    let ξ = ξʹ;
-    for (let j = 1; j <= 6; j++) ξ += α[j] * Math.sin(2 * j * ξʹ) * Math.cosh(2 * j * ηʹ);
+    let ksai = ksai_;
+    for (let j = 1; j <= 6; j++) ksai += alpha[j] * Math.sin(2 * j * ksai_) * Math.cosh(2 * j * yita_);
 
-    let η = ηʹ;
-    for (let j = 1; j <= 6; j++) η += α[j] * Math.cos(2 * j * ξʹ) * Math.sinh(2 * j * ηʹ);
+    let yita = yita_;
+    for (let j = 1; j <= 6; j++) yita += alpha[j] * Math.cos(2 * j * ksai_) * Math.sinh(2 * j * yita_);
 
-    let x = k0 * A * η;
-    let y = k0 * A * ξ;
+    let x = k0 * A * yita;
+    let y = k0 * A * ksai;
 
     x = x + falseEasting;
     if (y < 0) y = y + falseNorthing;
@@ -235,10 +235,10 @@ function convertUtmToLatLon(y, x, zone) {
 
     var A = a / (1 + n) * (1 + 1 / 4 * n2 + 1 / 64 * n4 + 1 / 256 * n6); // 2πA is the circumference of a meridian
 
-    var η = x / (k0 * A);
-    var ξ = y / (k0 * A);
+    var yita = x / (k0 * A);
+    var ksai = y / (k0 * A);
 
-    var β = [null, // note β is one-based array (6th order Krüger expressions)
+    var beta = [null, // note beta is one-based array (6th order Krüger expressions)
         1 / 2 * n - 2 / 3 * n2 + 37 / 96 * n3 -    1 / 360 * n4 -   81 / 512 * n5 +    96199 / 604800 * n6,
                1 / 48 * n2 +  1 / 15 * n3 - 437 / 1440 * n4 +   46 / 105 * n5 - 1118711 / 3870720 * n6,
                         17 / 480 * n3 -   37 / 840 * n4 - 209 / 4480 * n5 +      5569 / 90720 * n6,
@@ -246,60 +246,60 @@ function convertUtmToLatLon(y, x, zone) {
                                                4583 / 161280 * n5 -  108847 / 3991680 * n6,
                                                              20648693 / 638668800 * n6 ];
 
-    var ξʹ = ξ;
-    for (var j = 1; j <= 6; j++) ξʹ -= β[j] * Math.sin(2 * j * ξ) * Math.cosh(2 * j * η);
+    var ksai_ = ksai;
+    for (var j = 1; j <= 6; j++) ksai_ -= beta[j] * Math.sin(2 * j * ksai) * Math.cosh(2 * j * yita);
 
-    var ηʹ = η;
-    for (var j = 1; j <= 6; j++) ηʹ -= β[j] * Math.cos(2 * j * ξ) * Math.sinh(2 * j * η);
+    var yita_ = yita;
+    for (var j = 1; j <= 6; j++) yita_ -= beta[j] * Math.cos(2 * j * ksai) * Math.sinh(2 * j * yita);
 
-    var sinhηʹ = Math.sinh(ηʹ);
-    var sinξʹ = Math.sin(ξʹ), cosξʹ = Math.cos(ξʹ);
+    var sinhyita_ = Math.sinh(yita_);
+    var sinksai_ = Math.sin(ksai_), cosksai_ = Math.cos(ksai_);
 
-    var τʹ = sinξʹ / Math.sqrt(sinhηʹ * sinhηʹ + cosξʹ * cosξʹ);
+    var tao_ = sinksai_ / Math.sqrt(sinhyita_ * sinhyita_ + cosksai_ * cosksai_);
 
-    var τi = τʹ;
+    var taoi = tao_;
     do {
-        var σi = Math.sinh(e * Math.atanh(e * τi / Math.sqrt(1 + τi * τi)));
-        var τiʹ = τi * Math.sqrt(1 + σi * σi) - σi * Math.sqrt(1 + τi * τi);
-        var δτi = (τʹ - τiʹ) / Math.sqrt(1 + τiʹ * τiʹ)
-            * (1 + (1 - e * e) * τi * τi) / ((1 - e * e) * Math.sqrt(1 + τi * τi));
-        τi += δτi;
-    } while (Math.abs(δτi) > 1e-12); // using IEEE 754 δτi -> 0 after 2-3 iterations
-    // note relatively large convergence test as δτi toggles on ±1.12e-16 for eg 31 N 400000 5000000
-    var τ = τi;
+        var sigmai = Math.sinh(e * Math.atanh(e * taoi / Math.sqrt(1 + taoi * taoi)));
+        var taoi_ = taoi * Math.sqrt(1 + sigmai * sigmai) - sigmai * Math.sqrt(1 + taoi * taoi);
+        var deltataoi = (tao_ - taoi_) / Math.sqrt(1 + taoi_ * taoi_)
+            * (1 + (1 - e * e) * taoi * taoi) / ((1 - e * e) * Math.sqrt(1 + taoi * taoi));
+        taoi += deltataoi;
+    } while (Math.abs(deltataoi) > 1e-12); // using IEEE 754 deltataoi -> 0 after 2-3 iterations
+    // note relatively large convergence test as deltataoi toggles on ±1.12e-16 for eg 31 N 400000 5000000
+    var tao = taoi;
 
-    var φ = Math.atan(τ);
+    var fai = Math.atan(tao);
 
-    var λ = Math.atan2(sinhηʹ, cosξʹ);
+    var lambda = Math.atan2(sinhyita_, cosksai_);
 
     // ---- convergence: Karney 2011 Eq 26, 27
 
     var p = 1;
-    for (var j = 1; j <= 6; j++) p -= 2 * j * β[j] * Math.cos(2 * j * ξ) * Math.cosh(2 * j * η);
+    for (var j = 1; j <= 6; j++) p -= 2 * j * beta[j] * Math.cos(2 * j * ksai) * Math.cosh(2 * j * yita);
     var q = 0;
-    for (var j = 1; j <= 6; j++) q += 2 * j * β[j] * Math.sin(2 * j * ξ) * Math.sinh(2 * j * η);
+    for (var j = 1; j <= 6; j++) q += 2 * j * beta[j] * Math.sin(2 * j * ksai) * Math.sinh(2 * j * yita);
 
-    var γʹ = Math.atan(Math.tan(ξʹ) * Math.tanh(ηʹ));
-    var γʺ = Math.atan2(q, p);
+    var gamma_ = Math.atan(Math.tan(ksai_) * Math.tanh(yita_));
+    var gamma__ = Math.atan2(q, p);
 
-    var γ = γʹ + γʺ;
+    var gamma = gamma_ + gamma__;
 
     // ---- scale: Karney 2011 Eq 28
 
-    var sinφ = Math.sin(φ);
-    var kʹ = Math.sqrt(1 - e * e * sinφ * sinφ) * Math.sqrt(1 + τ * τ) * Math.sqrt(sinhηʹ * sinhηʹ + cosξʹ * cosξʹ);
-    var kʺ = A / a / Math.sqrt(p * p + q * q);
+    var sinfai = Math.sin(fai);
+    var k_ = Math.sqrt(1 - e * e * sinfai * sinfai) * Math.sqrt(1 + tao * tao) * Math.sqrt(sinhyita_ * sinhyita_ + cosksai_ * cosksai_);
+    var k__ = A / a / Math.sqrt(p * p + q * q);
 
-    var k = k0 * kʹ * kʺ;
+    var k = k0 * k_ * k__;
 
     // ------------
 
-    var λ0 = degreesToRadians((z - 1) * 6 - 180 + 3); // longitude of central meridian
-    λ += λ0; // move λ from zonal to global coordinates
+    var lambda0 = degreesToRadians((z - 1) * 6 - 180 + 3); // longitude of central meridian
+    lambda += lambda0; // move lambda from zonal to global coordinates
 
     // round to reasonable precision
-    var lat = radiansToDegrees(φ); // nm precision (1nm = 10^-11°)
-    var lon = radiansToDegrees(λ); // (strictly lat rounding should be φ⋅cosφ!)
+    var lat = radiansToDegrees(fai); // nm precision (1nm = 10^-11°)
+    var lon = radiansToDegrees(lambda); // (strictly lat rounding should be fai⋅cosfai!)
 
     return [lon, lat];
 }
